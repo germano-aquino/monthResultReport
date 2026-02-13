@@ -1,3 +1,4 @@
+import he from "he";
 import headers from "./headers.js";
 
 const comissionUrl =
@@ -31,9 +32,24 @@ const lojaIds = {
   },
 };
 
+const today = new Date();
+const finalDateObj = new Date(today.getFullYear(), today.getMonth(), 0);
+const year = finalDateObj.getFullYear();
+const month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
+const finalDay = String(finalDateObj.getDate()).padStart(2, "0");
+const startDay = "01";
+const finalDate = `${finalDay}/${month}/${year}`;
+const startDate = `${startDay}/${month}/${year}`;
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function stringToNumber(str) {
   return parseFloat(
-    str.replace(/\s/g, "").replace(/\./g, "").replace(",", "."),
+    parseFloat(
+      str.replace(/\s/g, "").replace(/\./g, "").replace(",", "."),
+    ).toFixed(2),
   );
 }
 
@@ -56,8 +72,8 @@ function getHeadersForStore(store) {
 async function comissionFetch(store) {
   const requestBody = {
     TipoData: 2,
-    DataInicio: "01/01/2026",
-    DataFim: "31/01/2026",
+    DataInicio: startDate,
+    DataFim: finalDate,
     TipoItemPago: 0,
     ExibirEstornos: false,
     TipoStatusFiltroPagamento: 1,
@@ -87,8 +103,8 @@ async function feeCardFetch(store) {
   const requestBody = {
     TemPermissaoParaFiltroCompleto: true,
     TipoData: 2,
-    DataInicio: "01/01/2026",
-    DataFim: "31/01/2026",
+    DataInicio: startDate,
+    DataFim: finalDate,
     IdFormaPagamentoOuTipo: 0,
     ExibirEstornos: false,
     ExibirCreditoClienteExportacao: [true, false],
@@ -117,8 +133,8 @@ async function expensesDatesFetch(store) {
   const requestBody = {
     "Filtro.IdEstabelecimento": lojaIds[store].idEstabelecimento,
     "Filtro.TipoBuscaPeriodoContaAPagar": 0,
-    "Filtro.InicioPeriodo": "01/01/2026",
-    "Filtro.FinalPeriodo": "31/01/2026",
+    "Filtro.InicioPeriodo": startDate,
+    "Filtro.FinalPeriodo": finalDate,
     "Filtro.IdLancamentoGrupo": 0,
     "Filtro.IdLancamentoCategoria": 0,
     "Filtro.StatusPagamento": 0,
@@ -126,8 +142,8 @@ async function expensesDatesFetch(store) {
     "Filtro.ApenasAtivos": true,
     "Filtro.IdPessoaFornecedor": 0,
     "Filtro.IdFormaPagamento": 0,
-    "Filtro.Mes": 1,
-    "Filtro.Ano": 2026,
+    "Filtro.Mes": month,
+    "Filtro.Ano": year,
     "Filtro.IndexLinhaTabela": 0,
   };
 
@@ -150,11 +166,12 @@ async function expensesDatesFetch(store) {
 }
 
 async function expensesDetailsFetch(store, date, index) {
+  console.log("Consultando despesas do dia %s.", date);
   const requestBody = {
     "Filtro.IdEstabelecimento": lojaIds[store].idEstabelecimento,
     "Filtro.TipoBuscaPeriodoContaAPagar": 0,
-    "Filtro.InicioPeriodo": "01/01/2026",
-    "Filtro.FinalPeriodo": "31/01/2026",
+    "Filtro.InicioPeriodo": startDate,
+    "Filtro.FinalPeriodo": finalDate,
     "Filtro.IdLancamentoGrupo": 0,
     "Filtro.IdLancamentoCategoria": 0,
     "Filtro.StatusPagamento": 0,
@@ -178,15 +195,40 @@ async function expensesDetailsFetch(store, date, index) {
 
   const table = responseBody.Html;
 
-  console.log(table);
+  const expensesDetails = [];
+
+  const typePattern = /(?<=<td class="colunaTipo">).+?(?=<)/g;
+  const types = table.match(typePattern).map((type) => he.decode(type).trim());
+
+  const valuePattern = /(?<=<td class="alignRight">).+?(?=<)/g;
+  const values = table.match(valuePattern);
+
+  for (let i = 0; i < types.length / 2; i++) {
+    expensesDetails.push({
+      type: types[i + 1],
+      value: stringToNumber(values[i]),
+    });
+  }
+  await sleep(2000);
+  return expensesDetails;
 }
 
 async function expensesFetch(store) {
+  let expensesByType = {};
   const dates = await expensesDatesFetch(store);
 
   for (const [index, date] of dates.entries()) {
-    await expensesDetailsFetch(store, date, index);
+    const details = await expensesDetailsFetch(store, date, index);
+    details.map((detail) => {
+      if (detail.type in expensesByType) {
+        expensesByType[detail.type] += detail.value;
+      } else {
+        expensesByType[detail.type] = detail.value;
+      }
+    });
   }
+
+  return expensesByType;
 }
 
 const request = {
