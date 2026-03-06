@@ -34,12 +34,14 @@ const lojaIds = {
 
 const today = new Date();
 const finalDateObj = new Date(today.getFullYear(), today.getMonth(), 0);
-const year = finalDateObj.getFullYear();
-const month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
+let year = finalDateObj.getFullYear();
+let month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
 const finalDay = String(finalDateObj.getDate()).padStart(2, "0");
 const startDay = "01";
-const finalDate = `${finalDay}/${month}/${year}`;
-const startDate = `${startDay}/${month}/${year}`;
+let finalDate = `${finalDay}/${month}/${year}`;
+let startDate = `${startDay}/${month}/${year}`;
+
+let cookie = headers.Cookie;
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -57,7 +59,8 @@ function getHeadersForStore(store) {
   const idEstabelecimentoPattern = new RegExp(
     "(?<=TrinksAuth.+idEstabelecimentoPadrao)(.+?)=(.+?)(?=;)",
   );
-  const cookie = headers.Cookie.replace(
+
+  cookie = cookie.replace(
     idEstabelecimentoPattern,
     `$1=${lojaIds[store].idEstabelecimento}`,
   );
@@ -92,6 +95,9 @@ async function comissionFetch(store) {
   });
 
   const responseBody = await response.json();
+
+  setCookie(response);
+
   const table = responseBody.Html;
 
   const comissionPattern = /(?<=<td class="alignRight">).+?(?=<)/g;
@@ -120,6 +126,8 @@ async function feeCardFetch(store) {
   });
 
   const responseBody = await response.json();
+
+  setCookie(response);
 
   const table = responseBody.Html;
 
@@ -157,6 +165,8 @@ async function expensesDatesFetch(store) {
 
   const responseBody = await response.json();
 
+  setCookie(response);
+
   const table = responseBody.Html;
   const datePattern =
     /(?<=<\/a>[\s\S]+<\/td>[\s\S]+<td>)(\d{2}\/\d{2}\/\d{4})(?=<)/g;
@@ -192,6 +202,8 @@ async function expensesDetailsFetch(store, date, index) {
   });
 
   const responseBody = await response.json();
+
+  setCookie(response);
 
   const table = responseBody.Html;
 
@@ -231,10 +243,48 @@ async function expensesFetch(store) {
   return expensesByType;
 }
 
+function setCookie(response) {
+  const setCookie = response.headers.getSetCookie();
+  if (setCookie) {
+    setCookie.map((ck) => {
+      const keyValue = ck.split(";")[0];
+      const [key, value] = keyValue.split("=");
+      const pattern = new RegExp(`(?<=${key})=(.+?)(?=;)`);
+      cookie = cookie.replace(pattern, `=${value}`);
+    });
+  }
+}
+
+function setStartDate(newStartDate) {
+  startDate = newStartDate;
+}
+
+function setFinalDate(newFinalDate) {
+  finalDate = newFinalDate;
+}
+
+function getStartDate() {
+  return startDate;
+}
+
+function getFinalDate() {
+  return finalDate;
+}
+
+function setMonthAndYear(newMonth, newYear) {
+  month = newMonth;
+  year = newYear;
+}
+
 const request = {
   comissionFetch,
   feeCardFetch,
   expensesFetch,
+  setStartDate,
+  setFinalDate,
+  getStartDate,
+  getFinalDate,
+  setMonthAndYear,
 };
 
 export default request;

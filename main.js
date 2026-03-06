@@ -1,7 +1,7 @@
-import he from "he";
 import fs from "fs";
 import { json2csv } from "json-2-csv";
 import request from "./request.js";
+import userInput from "./userInput.js";
 
 const report = [
   {
@@ -40,6 +40,17 @@ let expensesByType = {
 await main();
 
 async function main() {
+  try {
+    await userInput.get();
+    await calculateReport();
+    writeCsvFile();
+  } catch (error) {
+    console.error("Não foi possível gerar o relatório");
+    console.error(error);
+  }
+}
+
+async function calculateReport() {
   for (const store of report) {
     console.log("Gerando relatório da loja %s.", store.loja);
 
@@ -50,8 +61,6 @@ async function main() {
     console.log("Relatório da loja %s finalizado.\n", store.loja);
     console.log(store);
   }
-
-  writeCsvFile();
 }
 
 async function getComission(store) {
