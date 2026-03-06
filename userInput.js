@@ -7,7 +7,7 @@ async function get() {
     input: process.stdin,
     output: process.stdout,
   });
-  const allowedInputs = ["", "m", "d"];
+  const allowedInputs = ["", "d"];
 
   console.log("Instruções:");
   console.log("Aperte 'enter' para gerar o relatório do mês passado.");

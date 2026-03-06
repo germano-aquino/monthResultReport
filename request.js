@@ -33,7 +33,7 @@ const lojaIds = {
 };
 
 const today = new Date();
-const finalDateObj = new Date(today.getFullYear(), today.getMonth(), 0);
+const finalDateObj = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 let year = finalDateObj.getFullYear();
 let month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
 const finalDay = String(finalDateObj.getDate()).padStart(2, "0");
