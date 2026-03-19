@@ -33,7 +33,7 @@ const lojaIds = {
 };
 
 const today = new Date();
-const finalDateObj = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+const finalDateObj = new Date(today.getFullYear(), today.getMonth(), 0);
 let year = finalDateObj.getFullYear();
 let month = String(finalDateObj.getMonth() + 1).padStart(2, "0");
 const finalDay = String(finalDateObj.getDate()).padStart(2, "0");
@@ -53,6 +53,13 @@ function stringToNumber(str) {
       str.replace(/\s/g, "").replace(/\./g, "").replace(",", "."),
     ).toFixed(2),
   );
+}
+
+function numberToString(price) {
+  return price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 }
 
 function getHeadersForStore(store) {
@@ -102,7 +109,7 @@ async function comissionFetch(store) {
 
   const comissionPattern = /(?<=<td class="alignRight">).+?(?=<)/g;
   const values = table.match(comissionPattern);
-  return stringToNumber(values[8]);
+  return "R$ " + values[8];
 }
 
 async function feeCardFetch(store) {
@@ -134,7 +141,7 @@ async function feeCardFetch(store) {
   const feePattern = /(?<=<td class="alignRight"><span>).+?(?=<)/g;
   const values = table.match(feePattern);
 
-  return stringToNumber(values[0]);
+  return "R$ " + values[0];
 }
 
 async function expensesDatesFetch(store) {
@@ -216,10 +223,11 @@ async function expensesDetailsFetch(store, date, index) {
   const values = table.match(valuePattern);
 
   for (let i = 0; i < types.length / 2; i++) {
-    expensesDetails.push({
-      type: types[i + 1],
-      value: stringToNumber(values[i]),
-    });
+    const detail = {
+      type: types[2 * i + 1],
+      value: 100 * stringToNumber(values[i]),
+    };
+    expensesDetails.push(detail);
   }
   await sleep(2000);
   return expensesDetails;
@@ -227,6 +235,8 @@ async function expensesDetailsFetch(store, date, index) {
 
 async function expensesFetch(store) {
   let expensesByType = {};
+  expensesByType["total"] = 0;
+
   const dates = await expensesDatesFetch(store);
 
   for (const [index, date] of dates.entries()) {
@@ -237,7 +247,11 @@ async function expensesFetch(store) {
       } else {
         expensesByType[detail.type] = detail.value;
       }
+      expensesByType["total"] += detail.value;
     });
+  }
+  for (let type in expensesByType) {
+    expensesByType[type] = numberToString(expensesByType[type] / 100);
   }
 
   return expensesByType;

@@ -72,13 +72,10 @@ async function getFeeCard(store) {
 }
 
 async function getExpenses(store) {
-  let total = 0;
-
   const expenses = await request.expensesFetch(store);
   expensesByType[store] = expenses;
 
-  for (const expense of Object.values(expenses)) total += expense;
-  return total;
+  return expenses["total"];
 }
 
 function writeCsvFile() {
